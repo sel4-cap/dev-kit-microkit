@@ -126,7 +126,7 @@ typedef long off_t;
 #define stderr stderr_uboot
 #define stdin stdin_uboot
 #define stdout stdout_uboot
-#define log log_uboot
+// #define log log_uboot
 #undef putc
 #define putc putc_uboot
 #undef getc
