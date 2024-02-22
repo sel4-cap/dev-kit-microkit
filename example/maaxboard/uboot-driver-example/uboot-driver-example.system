@@ -32,8 +32,8 @@
     
     <protection_domain name="hello" priority="254">
         <map mr="timer_reg_mem" vaddr="0x306a0000" perms="rw" cached="false"/>
-        <map mr="clock-controller_mem" vaddr="0x30330000" perms="rw" cached="false"/>
-        <map mr="iomuxc_mem" vaddr="0x30380000" perms="rw" cached="false" />
+        <map mr="clock-controller_mem" vaddr="0x30380000" perms="rw" cached="false"/>
+        <map mr="iomuxc_mem" vaddr="0x30330000" perms="rw" cached="false" />
         <map mr="ocotp-ctrl_mem" vaddr="0x30350000" perms="rw" cached="false"/>
         <map mr="syscon_mem" vaddr="0x30360000" perms="rw" cached="false" />
         <map mr="usb_2_mem" vaddr="0x38200000" perms="rw" cached="false"/>
@@ -50,7 +50,7 @@
         <map mr="i2c_2_mem" vaddr="0x30a40000" perms="rw" cached="false"/>
         <map mr="i2c_3_mem" vaddr="0x30a50000" perms="rw" cached="false"/>
         <map mr="spi_0_mem" vaddr="0x30820000" perms="rw" cached="false"/>
-        <map mr="timer_mem" vaddr="0x306c0000" perms="rw" cached="false"/>
+        <map mr="timer_mem" vaddr="0x306c0000" perms="rw" cached="false" setvar_vaddr="timer_base"/>
         <map mr="heap_mem" vaddr="0x50000000" perms="rw" cached="false" setvar_vaddr="__heap_start"/>
         <map mr="heap_end" vaddr="0x52000000" perms="rw" cached="false" setvar_vaddr="__heap_end"/>
         <map mr="dma_pool" vaddr="0x54000000" perms="rw" cached="true" setvar_vaddr="dma_base"/>

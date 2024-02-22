@@ -60,3 +60,4 @@ mkdir example/maaxboard/$string_argument/example-build
 cd example/maaxboard/$string_argument/build
 cmake .. 
 make 
+sudo cp $microkit_path/example/maaxboard/uboot-driver-example/example-build/sel4test-driver-image-arm-maaxboard.img "/var/lib/tftpboot/loader-daniel.img"
