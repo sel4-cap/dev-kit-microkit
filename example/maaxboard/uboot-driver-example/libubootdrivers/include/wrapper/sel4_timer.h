@@ -11,9 +11,9 @@ void initialise_and_start_timer(void);
 
 void shutdown_timer(void);
 
-void mdelay(unsigned long);
-
 void udelay(unsigned long);
+
+void mdelay(unsigned int);
 
 // static inline void ndelay(unsigned long nsec)
 // {
