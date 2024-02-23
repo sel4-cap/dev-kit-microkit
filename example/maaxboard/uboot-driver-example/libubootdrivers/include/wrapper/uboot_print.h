@@ -29,10 +29,12 @@
 #define UBOOT_LOG_ALLOW_FATAL   UBOOT_LOG_ALLOW(UBOOT_LOG_FATAL)
 
 #define UBOOT_LOG_PRINTF(...) ({ \
-    printf("%s@%s:%u ", __func__, __FILE__, __LINE__); \
+    const char* base_name = strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__; \
+    printf("%s@%s:%u ", __func__, base_name, __LINE__); \
     printf(__VA_ARGS__); \
     printf("\n"); \
 })
+
 
 #define DUMMY_UNUSED ({})
 
