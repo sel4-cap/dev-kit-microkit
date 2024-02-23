@@ -132,5 +132,3 @@ typedef long off_t;
 #undef getc
 #define getc getc_uboot
 #define putc_uboot microkit_dbg_putc
-// #define malloc(size) ta_alloc(size)
-// #define free ta_free
