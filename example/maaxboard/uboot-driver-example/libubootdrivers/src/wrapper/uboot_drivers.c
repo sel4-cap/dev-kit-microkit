@@ -148,7 +148,7 @@ static int set_parent_status(int current_node, char *status_to_set)
     // Set status of this node.
     int err = fdt_setprop_string(uboot_fdt_pointer, current_node, "status", status_to_set);
     if (err != 0) {
-        ZF_LOGE("Failed to set 'status' with error %i. Buffer not big enough?", err);
+        UBOOT_LOGE("Failed to set 'status' with error %i. Buffer not big enough?", err);
         return -1;
     };
 
@@ -166,7 +166,7 @@ static int set_all_child_status(int parent_node, char *status_to_set)
     // Set status of this node.
     int err = fdt_setprop_string(uboot_fdt_pointer, parent_node, "status", status_to_set);
     if (err != 0) {
-        ZF_LOGE("Failed to set 'status' with error %i. Buffer not bid enough?", err);
+        UBOOT_LOGE("Failed to set 'status' with error %i. Buffer not bid enough?", err);
         return -1;
     };
 
@@ -205,7 +205,7 @@ int initialise_uboot_drivers(
 {
     // Return immediately if no devices have been requested.
     if (0 == dev_count || NULL == dev_paths) {
-        ZF_LOGE("Library initialisation cancelled, no devices supplied");
+        UBOOT_LOGE("Library initialisation cancelled, no devices supplied");
         return -1;
     }
 
@@ -219,7 +219,7 @@ int initialise_uboot_drivers(
     // us extra space to make modifications as required.
 
     if (orig_fdt_blob == NULL) {
-        ZF_LOGE("Unable to access FDT");
+        UBOOT_LOGE("Unable to access FDT");
         return -1;
     }
 

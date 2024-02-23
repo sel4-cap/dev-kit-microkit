@@ -13,7 +13,9 @@ void shutdown_timer(void);
 
 void mdelay(unsigned long);
 
-static inline void ndelay(unsigned long nsec)
-{
-	mdelay(DIV_ROUND_UP(nsec, 1000000));
-}
+void udelay(unsigned long);
+
+// static inline void ndelay(unsigned long nsec)
+// {
+// 	mdelay(DIV_ROUND_UP(nsec, 1000000));
+// }

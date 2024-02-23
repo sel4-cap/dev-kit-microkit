@@ -7,12 +7,7 @@
 
 #include <sel4_timer.h>
 
-void udelay(unsigned long usec)
-{
-    mdelay(DIV_ROUND_UP(usec, 1000));
-}
-
 void __udelay(unsigned long usec)
 {
-    mdelay(DIV_ROUND_UP(usec, 1000));
+    udelay(usec);
 }
