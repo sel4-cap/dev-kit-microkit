@@ -5,7 +5,7 @@
  * 
  */
 
-// #include <sel4platsupport/io.h>
+#include <io_dma.h>
 
 /*
  * initialise_uboot_drivers() - initialise the u-boot driver library.
@@ -22,6 +22,7 @@
  */
 
 int initialise_uboot_drivers(
+    ps_dma_man_t *dma_manager,
     const char *orig_fdt_blob,
     const char **dev_paths,
     uint32_t dev_count);
