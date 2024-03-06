@@ -43,8 +43,8 @@
 // #define ZF_LOG_LEVEL CONFIG_LIB_UTILS_DEFAULT_ZF_LOG_LEVEL
 // #endif /* ZF_LOG_LEVEL */
 
-#include <utils/zf_log.h>
-#include <utils/zf_log_if.h>
+// #include <utils/zf_log.h>
+// #include <utils/zf_log_if.h>
 
 /* deprecated, use the following instead:
  *
@@ -59,5 +59,5 @@
  * all ZF_LOG output, settings it to ZF_LOG_FATAL will
  * only display fatal outputs.
  */
-#define LOG_ERROR(...) ZF_LOGE(__VA_ARGS__)
-#define LOG_INFO(...) ZF_LOGI(__VA_ARGS__)
+// #define LOG_ERROR(...) ZF_LOGE(__VA_ARGS__)
+// #define LOG_INFO(...) ZF_LOGI(__VA_ARGS__)

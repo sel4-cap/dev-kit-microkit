@@ -47,7 +47,6 @@ typedef enum dma_cache_op {
  * @return NULL on failure, otherwise virtual address of allocation
  */
 typedef void *(*ps_dma_alloc_fn_t)(
-    void *cookie,
     size_t size,
     int align,
     int cached,
@@ -61,7 +60,6 @@ typedef void *(*ps_dma_alloc_fn_t)(
  * @param size Original size of the allocated buffer
  */
 typedef void (*ps_dma_free_fn_t)(
-    void *cookie,
     void *addr,
     size_t size);
 
@@ -78,7 +76,6 @@ typedef void (*ps_dma_free_fn_t)(
  * @return 0 if memory could not be pinned, otherwise physical address
  */
 typedef uintptr_t (*ps_dma_pin_fn_t)(
-    void *cookie,
     void *addr,
     size_t size);
 
@@ -92,7 +89,6 @@ typedef uintptr_t (*ps_dma_pin_fn_t)(
  * @param size Range of the memory to unpin
  */
 typedef void (*ps_dma_unpin_fn_t)(
-    void *cookie,
     void *addr,
     size_t size);
 
@@ -106,14 +102,12 @@ typedef void (*ps_dma_unpin_fn_t)(
  * @param op Cache operation to perform
  */
 typedef void (*ps_dma_cache_op_fn_t)(
-    void *cookie,
     void *addr,
     size_t size,
     dma_cache_op_t op);
 
 
 typedef struct ps_dma_man {
-    void *cookie;
     ps_dma_alloc_fn_t dma_alloc_fn;
     ps_dma_free_fn_t dma_free_fn;
     ps_dma_pin_fn_t dma_pin_fn;

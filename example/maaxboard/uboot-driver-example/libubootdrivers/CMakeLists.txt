@@ -687,7 +687,7 @@ if(LibUBOOT)
     # target_include_directories(ubootdrivers INTERFACE ../libmicrokit/include)
 
     # target_link_libraries(ubootdrivers sel4 muslc sel4platsupport utils)
-    target_link_libraries(ubootdrivers utils)
+    target_link_libraries(ubootdrivers utils sel4dma)
 
     #########################
     # Manage logging levels #

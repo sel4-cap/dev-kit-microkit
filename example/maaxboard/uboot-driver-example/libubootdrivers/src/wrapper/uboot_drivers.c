@@ -28,9 +28,9 @@
 static void* uboot_fdt_pointer = NULL;
 
 // dma state
-uintptr_t dma_base;
-uintptr_t dma_cp_paddr;
-uintptr_t dma_cp_vaddr = 0x54000000;
+// uintptr_t dma_base;
+// uintptr_t dma_cp_paddr;
+// uintptr_t dma_cp_vaddr = 0x54000000;
 
 
 
@@ -198,7 +198,7 @@ static int disable_not_required_devices(const char **device_paths, uint32_t devi
 }
 
 int initialise_uboot_drivers(
-    ps_dma_man_t *dma_manager,
+    ps_dma_man_t dma_manager,
     const char *orig_fdt_blob,
     const char **dev_paths,
     uint32_t dev_count)
@@ -243,9 +243,8 @@ int initialise_uboot_drivers(
     //     goto error;
 
     //Initialise the DMA management.
-    printf("dma_cp_paddr %x\n", dma_cp_paddr);
     //sel4_dma_init(dma_cp_paddr, dma_cp_vaddr, dma_cp_vaddr + 0x2000000);
-    sel4_dma_initialise(*dma_manager);
+    sel4_dma_initialise(&dma_manager);
 
     // Start the U-Boot wrapper. Provide it a pointer to the FDT blob.
     ret = initialise_uboot_wrapper(uboot_fdt_pointer);

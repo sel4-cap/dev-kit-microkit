@@ -21,21 +21,21 @@
 
 /* Determine which functionality to test based upon the platform */
 #if defined(CONFIG_PLAT_MAAXBOARD)
-    #define TEST_CLK
-    #define TEST_CLOCKS
-    #define TEST_SPI
-    #define TEST_LED
-    #define TEST_LED_NAME_1 "usr_led"
-    #define TEST_LED_NAME_2 "sys_led"
-    #define TEST_I2C
-    #define TEST_ETHERNET
+    // #define TEST_CLK
+    // #define TEST_CLOCKS
+    // #define TEST_SPI
+    // #define TEST_LED
+    // #define TEST_LED_NAME_1 "usr_led"
+    // #define TEST_LED_NAME_2 "sys_led"
+    // #define TEST_I2C
+    // #define TEST_ETHERNET
     #define TEST_USB
-    #define TEST_MMC
-    #define TEST_PINMUX
-    #define TEST_GPIO
-    #define TEST_FILESYSTEM
-    #define TEST_FILESYSTEM_PARTITION "mmc 0:1"  // Partition 1 on mmc device 0
-    #define TEST_FILESYSTEM_FILENAME  "test_file.txt"
+    // #define TEST_MMC
+    // #define TEST_PINMUX
+    // #define TEST_GPIO
+    // #define TEST_FILESYSTEM
+    // #define TEST_FILESYSTEM_PARTITION "mmc 0:1"  // Partition 1 on mmc device 0
+    // #define TEST_FILESYSTEM_FILENAME  "test_file.txt"
 
 #elif defined(CONFIG_PLAT_ODROIDC2)
     #define TEST_PINMUX
@@ -177,14 +177,22 @@ const char* _end = incbin_device_tree_end;
 // picolibc setup
 seL4_IPCBuffer* __sel4_ipc_buffer_obj;
 
+//dma state
+uintptr_t dma_base;
+uintptr_t dma_cp_paddr;
+size_t dma_size = 0x2000;
+
+static ps_dma_man_t dma_manager;
+
 void
 init(void)
 {
     const char *const_dev_paths[] = DEV_PATHS;
 
     // SET UP DMA MANAGER
-    ps_dma_man_t *dma_manager;
-    camkes_dma_manager(dma_manager);
+    camkes_dma_init(dma_base, dma_size,
+        4096, 0);
+    camkes_dma_manager(&dma_manager);
 
     // initialise uboot library
     initialise_uboot_drivers(

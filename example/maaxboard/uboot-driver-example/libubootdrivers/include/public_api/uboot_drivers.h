@@ -22,7 +22,7 @@
  */
 
 int initialise_uboot_drivers(
-    ps_dma_man_t *dma_manager,
+    ps_dma_man_t dma_manager,
     const char *orig_fdt_blob,
     const char **dev_paths,
     uint32_t dev_count);

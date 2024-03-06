@@ -15,20 +15,28 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <dma.h>
+#include <dma_microkit.h>
 #include <error.h>
 #include <utils/util.h>
 #include <sel4/sel4.h>
-#include <vspace/page.h>
+// #include <vspace/page.h>
+#include <uboot_print.h>
 
 /* Check consistency of bookkeeping structures */
-// #define DEBUG_DMA
+#define DEBUG_DMA
 
 /* Force the _dma_pools section to be created even if no modules are defined. */
-static USED SECTION("_dma_pools") struct {} dummy_dma_pool;
+// static USED SECTION("_dma_pools") struct {} dummy_dma_pool;
 /* Definitions so that we can find the exposed DMA frames */
-extern dma_pool_t *__start__dma_pools[];
-extern dma_pool_t *__stop__dma_pools[];
+// extern dma_pool_t *__start__dma_pools[];
+// extern dma_pool_t *__stop__dma_pools[];
+
+// Declare the dma pool structure, the initialisation is done in the dma_init function
+dma_pool_t *dma_pool_global;
+
+extern uintptr_t dma_base;
+extern uintptr_t dma_cp_paddr;
+
 
 /* NOT THREAD SAFE. The code could be made thread safe relatively easily by
  * operating atomically on the free list.
@@ -384,20 +392,34 @@ static void defrag(void)
     check_consistency();
 }
 
+// Change this function to only look at one dma pool
+// static dma_frame_t *get_frame_desc(
+//     void *ptr)
+// {
+//     for (dma_pool_t **pool = __start__dma_pools;
+//          pool < __stop__dma_pools; pool++) {
+//         if ((*pool)->start_vaddr <= (uintptr_t) ptr
+//             && (uintptr_t) ptr <= (*pool)->end_vaddr) {
+//             /* Calculate the frame number in the pool */
+//             uintptr_t frame_base = (uintptr_t) ptr & ~MASK(ffs((*pool)->frame_size) - 1);
+//             int frame_num = (frame_base - (*pool)->start_vaddr) / (*pool)->frame_size;
+//             dma_frame_t *frame = (*pool)->dma_frames[frame_num];
+//             return frame;
+//         }
+//     }
+
+//     return NULL;
+// }
+
 static dma_frame_t *get_frame_desc(
-    void *ptr)
+    void *ptr,
+    dma_pool_t *pool)
 {
-    for (dma_pool_t **pool = __start__dma_pools;
-         pool < __stop__dma_pools; pool++) {
-        if ((*pool)->start_vaddr <= (uintptr_t) ptr
-            && (uintptr_t) ptr <= (*pool)->end_vaddr) {
             /* Calculate the frame number in the pool */
-            uintptr_t frame_base = (uintptr_t) ptr & ~MASK(ffs((*pool)->frame_size) - 1);
-            int frame_num = (frame_base - (*pool)->start_vaddr) / (*pool)->frame_size;
-            dma_frame_t *frame = (*pool)->dma_frames[frame_num];
+            uintptr_t frame_base = (uintptr_t) ptr & ~MASK(ffs(pool->frame_size) - 1);
+            int frame_num = (frame_base - pool->start_vaddr) / pool->frame_size;
+            dma_frame_t *frame = pool->dma_frames[frame_num];
             return frame;
-        }
-    }
 
     return NULL;
 }
@@ -448,6 +470,11 @@ static void free_region(
     check_consistency();
 }
 
+uintptr_t* getPhys(void* virt) {
+    int offset = (uint64_t)virt - (int)dma_base;
+    return (uintptr_t*)(dma_cp_paddr+offset);
+}
+
 int camkes_dma_init(
     void *dma_pool,
     size_t dma_pool_sz,
@@ -470,7 +497,7 @@ int camkes_dma_init(
      * power-of-2-sized, so the bookkeeping struct better be
      * power-of-2-aligned. Your compiler should always guarantee this.
      */
-    static_assert(IS_POWER_OF_2(alignof(region_t)),
+    assert(IS_POWER_OF_2(alignof(region_t)) &&
                   "region_t is not power-of-2-aligned");
 
     /* The page size the caller has given us should be a power of 2 and at least
@@ -486,17 +513,47 @@ int camkes_dma_init(
     STATS(stats.minimum_allocation = SIZE_MAX);
     STATS(stats.minimum_alignment = INT_MAX);
 
-    if (page_size != 0) {
-        /* The caller specified a page size. Excellent; we don't have to work
-         * it out for ourselves.
-         */
-        for (void *base = dma_pool; base < dma_pool + dma_pool_sz;
-             base += page_size) {
+    // Set up dma pool, split dma pool into frames based on page size
+    size_t num_frames = dma_pool_sz/page_size;
+    dma_frame_t **dma_frames_array = (dma_frame_t **)malloc(num_frames * sizeof(dma_frame_t *));
+
+    // Initialize the dma_frames part of the dma_pool struct
+    for (size_t i = 0; i < num_frames; i++) {
+        // Allocate memory for each frame
+        dma_frames_array[i] = (dma_frame_t *)malloc(sizeof(dma_frame_t));
+
+        // Assuming 'getPhys()' is a function that converts a virtual address to a physical address
+        uintptr_t vaddr = (uintptr_t)dma_pool + (i * page_size);
+        uintptr_t paddr = getPhys(vaddr);
+
+        // Initialize each frame
+        dma_frames_array[i]->cap = 3; // Placeholder, replace with actual capability
+        dma_frames_array[i]->size = page_size;
+        dma_frames_array[i]->vaddr = vaddr;
+        dma_frames_array[i]->paddr = paddr;
+        dma_frames_array[i]->cached = cached;
+    }
+
+    // Initalise the dma pool
+    dma_pool_global->start_vaddr = dma_pool;
+    dma_pool_global->end_vaddr = dma_pool + dma_pool_sz;
+    // frame_size = page size
+    dma_pool_global->frame_size = page_size;
+    dma_pool_global->pool_size = dma_pool_sz;
+    dma_pool_global->num_frames = num_frames;
+    dma_pool_global->dma_frames = dma_frames_array;
+
+
+    /* The caller specified a page size. Excellent; we don't have to work
+        * it out for ourselves.
+        */
+    for (void *base = dma_pool; base < dma_pool + dma_pool_sz;
+            base += page_size) {
             /* Grab the paddr of the frame and cache it, note that there can be
              * DMA pools with no caps exposed */
-            dma_frame_t *frame = get_frame_desc(base);
+            dma_frame_t *frame = get_frame_desc(base, &dma_pool_global);
             if (frame) {
-                seL4_ARCH_Page_GetAddress_t res = seL4_ARCH_Page_GetAddress(frame->cap);
+                seL4_ARM_Page_GetAddress_t res = seL4_ARM_Page_GetAddress(frame->cap);
                 assert(res.error == 0);
                 frame->paddr = res.paddr;
             }
@@ -504,54 +561,6 @@ int camkes_dma_init(
                    "we misaligned the DMA pool base address during "
                    "initialisation");
             free_region(base, page_size, cached);
-        }
-    } else {
-        /* The lazy caller didn't bother giving us a page size. Manually scan
-         * for breaks in physical contiguity.
-         */
-        for (void *base = dma_pool; base < dma_pool + dma_pool_sz;) {
-            uintptr_t base_paddr = camkes_dma_get_paddr(base);
-            if (base_paddr == 0) {
-                /* The caller gave us a region backed by non-reversible frames. */
-                return -1;
-            }
-            void *limit = base + 1;
-            uintptr_t next_expected_paddr = base_paddr + 1;
-            while (limit < dma_pool + dma_pool_sz) {
-                if (limit == NULL) {
-                    /* The user gave us a region that wraps virtual memory. */
-                    return -1;
-                }
-                uintptr_t limit_paddr = camkes_dma_get_paddr(limit);
-                if (limit_paddr == 0) {
-                    /* The user gave us a region that wraps physical memory. */
-                    return -1;
-                }
-                if (limit_paddr != next_expected_paddr) {
-                    /* We've hit a physical contiguity break (== frame
-                     * boundary).
-                     */
-                    break;
-                }
-                limit++;
-                next_expected_paddr++;
-            }
-            /* Only add the region if it's large enough to actually contain the
-             * necessary metadata.
-             */
-            if (base + sizeof(region_t) >= limit) {
-                assert((uintptr_t)base % alignof(region_t) == 0 &&
-                       "we misaligned the DMA pool base address during "
-                       "initialisation");
-                free_region(base, page_size, cached);
-            }
-
-            /* Move to the next region. We always need to be considering a
-             * region aligned for bookkeeping, so bump the address up if
-             * necessary.
-             */
-            base = (void *)ALIGN_UP((uintptr_t)limit, alignof(region_t));
-        }
     }
 
     check_consistency();
@@ -559,38 +568,47 @@ int camkes_dma_init(
     return 0;
 }
 
+
 uintptr_t camkes_dma_get_paddr(
     void *ptr)
 {
-    dma_frame_t *frame = get_frame_desc(ptr);
+    printf("camkes_dma_get_paddr\n");
+    dma_frame_t *frame = get_frame_desc(ptr, &dma_pool_global);
+    printf("Frame %x\n", frame);
+    printf("After getting frame\n");
     uintptr_t offset = (uintptr_t)ptr & MASK(ffs(frame->size) - 1);
+    printf("After getting offset\n");
     if (frame) {
         if (frame->paddr) {
             /* Grab the cached copy */
+            printf("returned\n");
             return frame->paddr + offset;
         }
-        seL4_ARCH_Page_GetAddress_t res = seL4_ARCH_Page_GetAddress(frame->cap);
-        ERR_IF(res.error != 0, camkes_error, ((camkes_error_t) {
-            .type = CE_SYSCALL_FAILED,
-            .instance = get_instance_name(),
-            .description = "failed to reverse virtual mapping to a DMA frame",
-            .syscall = ARCHPageGetAddress,
-            .error = res.error,
-        }), ({
-            return (uintptr_t)NULL;
-        }));
+        seL4_ARM_Page_GetAddress_t res = seL4_ARM_Page_GetAddress(frame->cap);
+        // ERR_IF(res.error != 0, camkes_error, ((camkes_error_t) {
+        //     .type = CE_SYSCALL_FAILED,
+        //     .instance = get_instance_name(),
+        //     .description = "failed to reverse virtual mapping to a DMA frame",
+        //     .syscall = ARCHPageGetAddress,
+        //     .error = res.error,
+        // }), ({
+        //     return (uintptr_t)NULL;
+        // }));
         frame->paddr = res.paddr;
+        printf("returned 1\n");
         return res.paddr + offset;
 
     } else {
+        printf("returned 2\n");
         return (uintptr_t)NULL;
     }
+
 }
 
 seL4_CPtr camkes_dma_get_cptr(
     void *ptr)
 {
-    dma_frame_t *frame = get_frame_desc(ptr);
+    dma_frame_t *frame = get_frame_desc(ptr, &dma_pool_global);
     if (frame) {
         return frame->cap;
     } else {
@@ -739,7 +757,7 @@ void *camkes_dma_alloc(
 
     if (head == NULL) {
         /* Nothing in the free list. */
-        ZF_LOGE("DMA pool empty, can't alloc block of size %zu (align=%u, cached=%u)",
+        UBOOT_LOGE("DMA pool empty, can't alloc block of size %zu (align=%u, cached=%u)",
                 size, align, cached);
         STATS(stats.failed_allocations_out_of_memory++);
         return NULL;
@@ -780,7 +798,7 @@ void *camkes_dma_alloc(
          * satisfy this allocation by defragmenting the free list and
          * re-attempting.
          */
-        ZF_LOGI("re-try allocation after defragmentation of free list");
+        UBOOT_LOGI("re-try allocation after defragmentation of free list");
         defrag();
         p = try_alloc_from_free_list(size, align, cached);
         if (p != NULL) {
@@ -817,7 +835,7 @@ void camkes_dma_free(
     }
 
     /* Check the underlying frame's bookkeeping to see if it's cached */
-    dma_frame_t *dma_frame = get_frame_desc(ptr);
+    dma_frame_t *dma_frame = get_frame_desc(ptr, &dma_pool_global);
     if (dma_frame == NULL) {
         /* User fed us an address that we don't keep track of, just ignore the error */
         return;
@@ -835,7 +853,6 @@ void camkes_dma_free(
  */
 
 static void *dma_alloc(
-    void *cookie UNUSED,
     size_t size,
     int align,
     int cached,
@@ -845,7 +862,6 @@ static void *dma_alloc(
 }
 
 static void dma_free(
-    void *cookie UNUSED,
     void *addr,
     size_t size)
 {
@@ -856,7 +872,6 @@ static void dma_free(
  * effectively a no-op.
  */
 static uintptr_t dma_pin(
-    void *cookie UNUSED,
     void *addr,
     size_t size UNUSED)
 {
@@ -865,7 +880,6 @@ static uintptr_t dma_pin(
 
 /* As above, all pages are pinned so this is also a no-op. */
 static void dma_unpin(
-    void *cookie UNUSED,
     void *addr UNUSED,
     size_t size UNUSED)
 {
@@ -873,16 +887,15 @@ static void dma_unpin(
 }
 
 static void dma_cache_op(
-    void *cookie UNUSED,
     void *addr UNUSED,
     size_t size UNUSED,
     dma_cache_op_t op UNUSED)
 {
     /* x86 DMA is usually cache coherent and doesn't need maintenance ops */
 #ifdef CONFIG_ARCH_ARM
-    dma_frame_t *frame = get_frame_desc(addr);
+    dma_frame_t *frame = get_frame_desc(addr, &dma_pool_global);
     if (frame == NULL) {
-        ZF_LOGE("Could not perform cache op");
+        UBOOT_LOGE("Could not perform cache op");
         return;
     }
 
@@ -896,7 +909,7 @@ static void dma_cache_op(
     }
     seL4_CPtr frame_cap = frame->cap;
     if (frame_cap == seL4_CapNull) {
-        ZF_LOGE("Could not perform cache op");
+        UBOOT_LOGE("Could not perform cache op");
         return;
     }
 
@@ -904,7 +917,7 @@ static void dma_cache_op(
     size_t page_size_of_region = frame->size;
     size_t frame_start_offset = (uintptr_t)addr % page_size_of_region;
     if ((frame_start_offset + size) > frame->size) {
-        ZF_LOGE("Specified range is outside the bounds of the dataport");
+        UBOOT_LOGE("Specified range is outside the bounds of the dataport");
         return;
     }
 
@@ -919,7 +932,7 @@ static void dma_cache_op(
         seL4_ARM_Page_CleanInvalidate_Data(frame_cap, frame_start_offset, frame_start_offset + size);
         break;
     default:
-        ZF_LOGF("Invalid cache_op %d", op);
+        UBOOT_LOGF("Invalid cache_op %d", op);
         return;
     }
 #endif
@@ -929,7 +942,7 @@ int camkes_dma_manager(
     ps_dma_man_t *man)
 {
     if (man == NULL) {
-        ZF_LOGE("man is NULL");
+        UBOOT_LOGE("man is NULL");
         return -1;
     }
     man->dma_alloc_fn = dma_alloc;

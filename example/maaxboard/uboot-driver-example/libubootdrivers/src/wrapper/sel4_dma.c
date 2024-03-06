@@ -8,6 +8,9 @@
 #include <io_dma.h>
 #include <linux/dma-direction.h>
 
+extern uintptr_t dma_base;
+extern uintptr_t dma_cp_paddr;
+
 #define MAX_DMA_ALLOCS 256
 
 struct dma_allocation_t {
@@ -173,7 +176,6 @@ void sel4_dma_flush_range(void *start, void *stop)
 
     /* Perform the flush */
     sel4_dma_manager->dma_cache_op_fn(
-        sel4_dma_manager->cookie,
         flush_start,
         flush_size,
         DMA_CACHE_OP_CLEAN);
@@ -215,7 +217,6 @@ void sel4_dma_invalidate_range(void *start, void *stop)
             ((void*) start - dma_alloc[alloc_index].public_vaddr);
 
     sel4_dma_manager->dma_cache_op_fn(
-        sel4_dma_manager->cookie,
         inval_start,
         inval_size,
         DMA_CACHE_OP_INVALIDATE);
@@ -243,7 +244,6 @@ void sel4_dma_free(void *vaddr)
     UBOOT_LOGD("vaddr = %p, alloc_index = %i", vaddr, alloc_index);
 
     sel4_dma_manager->dma_free_fn(
-        sel4_dma_manager->cookie,
         dma_alloc[alloc_index].mapped_vaddr,
         dma_alloc[alloc_index].size);
 
@@ -262,30 +262,27 @@ void* sel4_dma_memalign(size_t align, size_t size)
     }
 
     void* mapped_vaddr = sel4_dma_manager->dma_alloc_fn(
-        sel4_dma_manager->cookie,
         size,
         align,
         false,
         PS_MEM_NORMAL);
+   
     if (mapped_vaddr == NULL) {
         UBOOT_LOGE("DMA allocation returned null pointer");
         return NULL;
     }
 
     void *paddr = (void*) sel4_dma_manager->dma_pin_fn(
-        sel4_dma_manager->cookie,
         mapped_vaddr,
         size);
     if (paddr == NULL) {
         UBOOT_LOGE("DMA pin return null pointer");
         // Clean up before returning.
         sel4_dma_manager->dma_free_fn(
-            sel4_dma_manager->cookie,
             mapped_vaddr,
             size);
         return NULL;
     }
-
     UBOOT_LOGD(
         "size = 0x%x, align = 0x%x, vaddr = %p, paddr = %p, alloc_index = %i",
         size, align, mapped_vaddr, paddr, alloc_index);

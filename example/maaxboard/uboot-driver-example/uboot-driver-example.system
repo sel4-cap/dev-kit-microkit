@@ -7,7 +7,7 @@
 <system>
     <memory_region name="heap_mem" size="0x2000000"/>
     <memory_region name="heap_end" size="0x1000"/>
-    <memory_region name="dma_pool" size="0x2000000"/>
+    <memory_region name="dma_pool" size="0x2000"/>
     <!-- <memory_region name="heap_mem2" size="0x2000000"/> -->
     <memory_region name="timer_reg_mem" size="0x20000" phys_addr="0x306a0000"/>
     <memory_region name="clock-controller_mem" size="0x10000" phys_addr="0x30380000"/>
