@@ -28,9 +28,9 @@
 static void* uboot_fdt_pointer = NULL;
 
 // dma state
-// uintptr_t dma_base;
-// uintptr_t dma_cp_paddr;
-// uintptr_t dma_cp_vaddr = 0x54000000;
+uintptr_t dma_base;
+uintptr_t dma_cp_paddr;
+size_t dma_size = 0x100000;
 
 
 
@@ -242,8 +242,9 @@ int initialise_uboot_drivers(
     // if (0 != ret)
     //     goto error;
 
-    //Initialise the DMA management.
-    //sel4_dma_init(dma_cp_paddr, dma_cp_vaddr, dma_cp_vaddr + 0x2000000);
+    // Initalise microkit dma, cached is set to true in the system file
+    microkit_dma_init(dma_base, dma_size,
+        4096, 1);
     sel4_dma_initialise(&dma_manager);
 
     // Start the U-Boot wrapper. Provide it a pointer to the FDT blob.
