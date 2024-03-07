@@ -32,7 +32,9 @@
 // extern dma_pool_t *__stop__dma_pools[];
 
 // Declare the dma pool structure, the initialisation is done in the dma_init function
-dma_pool_t *dma_pool_global;
+static dma_pool_t dma_pool_global_instance;
+dma_pool_t *dma_pool_global = &dma_pool_global_instance;
+
 
 extern uintptr_t dma_base;
 extern uintptr_t dma_cp_paddr;
@@ -415,13 +417,11 @@ static dma_frame_t *get_frame_desc(
     void *ptr,
     dma_pool_t *pool)
 {
-            /* Calculate the frame number in the pool */
-            uintptr_t frame_base = (uintptr_t) ptr & ~MASK(ffs(pool->frame_size) - 1);
-            int frame_num = (frame_base - pool->start_vaddr) / pool->frame_size;
-            dma_frame_t *frame = pool->dma_frames[frame_num];
-            return frame;
-
-    return NULL;
+    /* Calculate the frame number in the pool */
+    uintptr_t frame_base = (uintptr_t) ptr & ~MASK(ffs(pool->frame_size) - 1);
+    int frame_num = (frame_base - pool->start_vaddr) / pool->frame_size;
+    dma_frame_t *frame = pool->dma_frames[frame_num];
+    return frame;
 }
 
 static void free_region(
@@ -481,6 +481,7 @@ int camkes_dma_init(
     size_t page_size,
     bool cached)
 {
+    printf("In dma init function\n");
 
     /* The caller should have passed us a valid DMA pool. */
     if (page_size != 0 && (page_size <= sizeof(region_t) ||
@@ -513,35 +514,48 @@ int camkes_dma_init(
     STATS(stats.minimum_allocation = SIZE_MAX);
     STATS(stats.minimum_alignment = INT_MAX);
 
+    printf("here\n");
+
     // Set up dma pool, split dma pool into frames based on page size
-    size_t num_frames = dma_pool_sz/page_size;
-    dma_frame_t **dma_frames_array = (dma_frame_t **)malloc(num_frames * sizeof(dma_frame_t *));
+    // size_t num_frames = dma_pool_sz/page_size;
+    // dma_frame_t **dma_frames_array = (dma_frame_t **)malloc(num_frames * sizeof(dma_frame_t *));
 
-    // Initialize the dma_frames part of the dma_pool struct
-    for (size_t i = 0; i < num_frames; i++) {
-        // Allocate memory for each frame
-        dma_frames_array[i] = (dma_frame_t *)malloc(sizeof(dma_frame_t));
+    // printf("here 1\n");
 
-        // Assuming 'getPhys()' is a function that converts a virtual address to a physical address
-        uintptr_t vaddr = (uintptr_t)dma_pool + (i * page_size);
-        uintptr_t paddr = getPhys(vaddr);
+    // // Initialize the dma_frames part of the dma_pool struct
+    // for (size_t i = 0; i < num_frames; i++) {
+    //     // Allocate memory for each frame
+    //     dma_frames_array[i] = (dma_frame_t *)malloc(sizeof(dma_frame_t));
 
-        // Initialize each frame
-        dma_frames_array[i]->cap = 3; // Placeholder, replace with actual capability
-        dma_frames_array[i]->size = page_size;
-        dma_frames_array[i]->vaddr = vaddr;
-        dma_frames_array[i]->paddr = paddr;
-        dma_frames_array[i]->cached = cached;
-    }
+    //     // Get the physical address
+    //     printf("vaddr is: %x\n", (uintptr_t)dma_pool + (i * page_size));
+    //     uintptr_t vaddr = (uintptr_t)dma_pool + (i * page_size);
+    //     uintptr_t paddr = getPhys(vaddr);
 
-    // Initalise the dma pool
-    dma_pool_global->start_vaddr = dma_pool;
-    dma_pool_global->end_vaddr = dma_pool + dma_pool_sz;
-    // frame_size = page size
-    dma_pool_global->frame_size = page_size;
-    dma_pool_global->pool_size = dma_pool_sz;
-    dma_pool_global->num_frames = num_frames;
-    dma_pool_global->dma_frames = dma_frames_array;
+    //     // Initialize each frame
+    //     dma_frames_array[i]->cap = 3; // Placeholder, replace with actual capability
+    //     dma_frames_array[i]->size = page_size;
+    //     dma_frames_array[i]->vaddr = vaddr;
+    //     dma_frames_array[i]->paddr = paddr;
+    //     dma_frames_array[i]->cached = cached;
+    // }
+
+    // printf("here 2\n");
+
+    // // Initalise the dma pool
+    // dma_pool_global->start_vaddr = dma_pool;
+    // printf("here 3\n");
+    // dma_pool_global->end_vaddr = dma_pool + dma_pool_sz;
+    // printf("here 4\n");
+    // // frame_size = page size
+    // dma_pool_global->frame_size = page_size;
+    // printf("here 5\n");
+    // dma_pool_global->pool_size = dma_pool_sz;
+    // printf("here 6\n");
+    // dma_pool_global->num_frames = num_frames;
+    // printf("here 7\n");
+    // dma_pool_global->dma_frames = dma_frames_array;
+    // printf("here 8\n");
 
 
     /* The caller specified a page size. Excellent; we don't have to work
@@ -549,19 +563,16 @@ int camkes_dma_init(
         */
     for (void *base = dma_pool; base < dma_pool + dma_pool_sz;
             base += page_size) {
-            /* Grab the paddr of the frame and cache it, note that there can be
-             * DMA pools with no caps exposed */
-            dma_frame_t *frame = get_frame_desc(base, &dma_pool_global);
-            if (frame) {
-                seL4_ARM_Page_GetAddress_t res = seL4_ARM_Page_GetAddress(frame->cap);
-                assert(res.error == 0);
-                frame->paddr = res.paddr;
-            }
+            printf("base pointer %x\n", base);
+            // printf("page size %d\n", page_size);
+            // printf("base + pool size %x\n", dma_pool + dma_pool_sz);
             assert((uintptr_t)base % alignof(region_t) == 0 &&
                    "we misaligned the DMA pool base address during "
                    "initialisation");
             free_region(base, page_size, cached);
-    }
+        }
+
+    printf("here 9\n");
 
     check_consistency();
 
@@ -572,36 +583,7 @@ int camkes_dma_init(
 uintptr_t camkes_dma_get_paddr(
     void *ptr)
 {
-    printf("camkes_dma_get_paddr\n");
-    dma_frame_t *frame = get_frame_desc(ptr, &dma_pool_global);
-    printf("Frame %x\n", frame);
-    printf("After getting frame\n");
-    uintptr_t offset = (uintptr_t)ptr & MASK(ffs(frame->size) - 1);
-    printf("After getting offset\n");
-    if (frame) {
-        if (frame->paddr) {
-            /* Grab the cached copy */
-            printf("returned\n");
-            return frame->paddr + offset;
-        }
-        seL4_ARM_Page_GetAddress_t res = seL4_ARM_Page_GetAddress(frame->cap);
-        // ERR_IF(res.error != 0, camkes_error, ((camkes_error_t) {
-        //     .type = CE_SYSCALL_FAILED,
-        //     .instance = get_instance_name(),
-        //     .description = "failed to reverse virtual mapping to a DMA frame",
-        //     .syscall = ARCHPageGetAddress,
-        //     .error = res.error,
-        // }), ({
-        //     return (uintptr_t)NULL;
-        // }));
-        frame->paddr = res.paddr;
-        printf("returned 1\n");
-        return res.paddr + offset;
-
-    } else {
-        printf("returned 2\n");
-        return (uintptr_t)NULL;
-    }
+    return getPhys(ptr);
 
 }
 
@@ -623,6 +605,7 @@ static void *try_alloc_from_free_region(
     region_t *prev,
     region_t *p)
 {
+    printf("try_alloc_from_free_region\n");
     /* Our caller should have rounded 'size' up. */
     assert(size >= sizeof(region_t));
 
@@ -647,6 +630,9 @@ static void *try_alloc_from_free_region(
     for (uintptr_t q = ROUND_DOWN(p_end - size, align);
          (q == (uintptr_t)p) || (q >= (uintptr_t)p + sizeof(region_t));
          q -= align) {
+        
+        printf("In for loop\n");
+        printf("size of alloc %d\n", size);
 
         uintptr_t q_end = (uintptr_t)q + size;
 
@@ -711,6 +697,10 @@ static void *try_alloc_from_free_list(
 {
     /* For each region in the free list... */
     for (region_t *prev = NULL, *p = head; p != NULL; prev = p, p = p->next) {
+        printf("start of region = %x\n", p);
+        printf("region size = %d\n", p->size);
+        printf("function cached = %d\n", cached);
+        printf("p cached = %d\n", p->cached);
 
         /* Check if region can satisfy the allocation request. */
         if ((p->size < size) || (p->cached != cached)) {
@@ -718,6 +708,7 @@ static void *try_alloc_from_free_list(
         }
 
         /* Try to allocate a DMA region within this region. */
+        printf("Before try_alloc_from_free_region\n");
         void *q = try_alloc_from_free_region(size, align, prev, p);
         if (NULL != q) {
             return q;
@@ -754,6 +745,8 @@ void *camkes_dma_alloc(
         }
         total_allocation_bytes += size;
     }));
+
+    printf("head %x\n", head);
 
     if (head == NULL) {
         /* Nothing in the free list. */
@@ -820,6 +813,8 @@ void *camkes_dma_alloc(
         }));
     }
 
+    printf("return pointer is %x\n", p);
+
     return p;
 }
 
@@ -827,21 +822,8 @@ void camkes_dma_free(
     void *ptr,
     size_t size)
 {
-    bool cached = 0;
-
-    /* Allow the user to free NULL. */
-    if (ptr == NULL) {
-        return;
-    }
-
-    /* Check the underlying frame's bookkeeping to see if it's cached */
-    dma_frame_t *dma_frame = get_frame_desc(ptr, &dma_pool_global);
-    if (dma_frame == NULL) {
-        /* User fed us an address that we don't keep track of, just ignore the error */
-        return;
-    }
-
-    cached = dma_frame->cached;
+    // Cached is set to true in the system file 
+    bool cached = 1;
 
     /* Call the common function to free the DMA memory */
     free_region(ptr, size, cached);
@@ -893,43 +875,18 @@ static void dma_cache_op(
 {
     /* x86 DMA is usually cache coherent and doesn't need maintenance ops */
 #ifdef CONFIG_ARCH_ARM
-    dma_frame_t *frame = get_frame_desc(addr, &dma_pool_global);
-    if (frame == NULL) {
-        UBOOT_LOGE("Could not perform cache op");
-        return;
-    }
-
-    /* If the frame is uncached then the cache op isn't required. This assumes
-       that if there is a setup where multiple software components have mappings
-       to the same DMA memory with different cache attributes then the component
-       with the cached mappings will be performing the cache maintenance ops and
-       not the uncached one.*/
-    if (frame->cached == 0) {
-        return;
-    }
-    seL4_CPtr frame_cap = frame->cap;
-    if (frame_cap == seL4_CapNull) {
-        UBOOT_LOGE("Could not perform cache op");
-        return;
-    }
-
-
-    size_t page_size_of_region = frame->size;
-    size_t frame_start_offset = (uintptr_t)addr % page_size_of_region;
-    if ((frame_start_offset + size) > frame->size) {
-        UBOOT_LOGE("Specified range is outside the bounds of the dataport");
-        return;
-    }
-
     switch (op) {
     case DMA_CACHE_OP_CLEAN:
-        seL4_ARM_Page_Clean_Data(frame_cap, frame_start_offset, frame_start_offset + size);
+        // seL4_ARM_Page_Clean_Data(frame_cap, frame_start_offset, frame_start_offset + size);
+        seL4_ARM_VSpace_CleanInvalidate_Data(3, addr, addr + size);
         break;
     case DMA_CACHE_OP_INVALIDATE:
-        seL4_ARM_Page_Invalidate_Data(frame_cap, frame_start_offset, frame_start_offset + size);
+        //seL4_ARM_Page_Invalidate_Data(frame_cap, frame_start_offset, frame_start_offset + size);
+        seL4_ARM_VSpace_Invalidate_Data(3, addr, addr + size);
         break;
     case DMA_CACHE_OP_CLEAN_INVALIDATE:
-        seL4_ARM_Page_CleanInvalidate_Data(frame_cap, frame_start_offset, frame_start_offset + size);
+        // seL4_ARM_Page_CleanInvalidate_Data(frame_cap, frame_start_offset, frame_start_offset + size);
+        seL4_ARM_VSpace_CleanInvalidate_Data(3, addr, addr + size);
         break;
     default:
         UBOOT_LOGF("Invalid cache_op %d", op);

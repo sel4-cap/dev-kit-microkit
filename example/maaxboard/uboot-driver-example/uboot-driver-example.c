@@ -180,7 +180,7 @@ seL4_IPCBuffer* __sel4_ipc_buffer_obj;
 //dma state
 uintptr_t dma_base;
 uintptr_t dma_cp_paddr;
-size_t dma_size = 0x2000;
+size_t dma_size = 0x100000;
 
 static ps_dma_man_t dma_manager;
 
@@ -189,9 +189,9 @@ init(void)
 {
     const char *const_dev_paths[] = DEV_PATHS;
 
-    // SET UP DMA MANAGER
+    // SET UP DMA MANAGER, cached is set to true in the system file
     camkes_dma_init(dma_base, dma_size,
-        4096, 0);
+        4096, 1);
     camkes_dma_manager(&dma_manager);
 
     // initialise uboot library
