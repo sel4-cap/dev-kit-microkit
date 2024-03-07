@@ -21,21 +21,21 @@
 
 /* Determine which functionality to test based upon the platform */
 #if defined(CONFIG_PLAT_MAAXBOARD)
-    // #define TEST_CLK
-    // #define TEST_CLOCKS
-    // #define TEST_SPI
-    // #define TEST_LED
-    // #define TEST_LED_NAME_1 "usr_led"
-    // #define TEST_LED_NAME_2 "sys_led"
-    // #define TEST_I2C
-    // #define TEST_ETHERNET
+    #define TEST_CLK
+    #define TEST_CLOCKS
+    #define TEST_SPI
+    #define TEST_LED
+    #define TEST_LED_NAME_1 "usr_led"
+    #define TEST_LED_NAME_2 "sys_led"
+    #define TEST_I2C
+    #define TEST_ETHERNET
     #define TEST_USB
-    // #define TEST_MMC
-    // #define TEST_PINMUX
-    // #define TEST_GPIO
-    // #define TEST_FILESYSTEM
-    // #define TEST_FILESYSTEM_PARTITION "mmc 0:1"  // Partition 1 on mmc device 0
-    // #define TEST_FILESYSTEM_FILENAME  "test_file.txt"
+    #define TEST_MMC
+    #define TEST_PINMUX
+    #define TEST_GPIO
+    #define TEST_FILESYSTEM
+    #define TEST_FILESYSTEM_PARTITION "mmc 0:1"  // Partition 1 on mmc device 0
+    #define TEST_FILESYSTEM_FILENAME  "test_file.txt"
 
 #elif defined(CONFIG_PLAT_ODROIDC2)
     #define TEST_PINMUX
@@ -190,9 +190,9 @@ init(void)
     const char *const_dev_paths[] = DEV_PATHS;
 
     // SET UP DMA MANAGER, cached is set to true in the system file
-    camkes_dma_init(dma_base, dma_size,
+    microkit_dma_init(dma_base, dma_size,
         4096, 1);
-    camkes_dma_manager(&dma_manager);
+    microkit_dma_manager(&dma_manager);
 
     // initialise uboot library
     initialise_uboot_drivers(
@@ -348,7 +348,7 @@ init(void)
     for (int x=0; x<=1000; x++) {
         while (uboot_stdin_tstc() > 0)
             printf("Received character: %c\n", uboot_stdin_getc(), stdout);
-        udelay(10);
+        udelay(10000);
     }
 
     run_uboot_command("usb stop");

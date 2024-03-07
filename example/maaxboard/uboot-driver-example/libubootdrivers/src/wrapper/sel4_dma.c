@@ -297,8 +297,6 @@ void* sel4_dma_memalign(size_t align, size_t size)
     dma_alloc[alloc_index].is_mapping = false;
     dma_alloc[alloc_index].mapping_dir = DMA_NONE;
 
-    printf("End memalign\n");
-
     return mapped_vaddr;
 }
 

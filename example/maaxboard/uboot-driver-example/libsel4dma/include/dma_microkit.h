@@ -21,7 +21,7 @@
  *
  * This function is intended to be called by the CAmkES backend and not by a user.
  */
-int camkes_dma_init(
+int microkit_dma_init(
     void *dma_pool,
     size_t dma_pool_sz,
     size_t page_size,
@@ -36,7 +36,7 @@ NONNULL(1) WARN_UNUSED_RESULT;
  *
  * @return Virtual address of allocation or NULL on failure
  */
-void *camkes_dma_alloc(
+void *microkit_dma_alloc(
     size_t size,
     unsigned int align,
     bool cached)
@@ -49,7 +49,7 @@ ALLOC_SIZE(1) ALLOC_ALIGN(2) MALLOC WARN_UNUSED_RESULT;
  *    no-op)
  * @param size Size that was given in the allocation request
  */
-void camkes_dma_free(
+void microkit_dma_free(
     void *ptr,
     size_t size);
 
@@ -58,13 +58,9 @@ void camkes_dma_free(
  * is undefined if you pass a pointer into memory that is part of a DMA buffer,
  * but not one currently allocated to you by camkes_dma_alloc_page.
  */
-uintptr_t camkes_dma_get_paddr(
+uintptr_t microkit_dma_get_paddr(
     void *ptr);
 
-/* Return the cap to a frame backing part of the DMA buffer. Returns seL4_CapNull
- * if passed a pointer into memory that is not part of a DMA buffer. */
-seL4_CPtr camkes_dma_get_cptr(
-    void *ptr);
 
 /* Initialise a DMA manager for use with libplatsupport. This manager will be
  * backed by the (generated) CAmkES DMA pool. Returns 0 on success.
@@ -74,7 +70,7 @@ seL4_CPtr camkes_dma_get_cptr(
  * this function. Note that you can mix calls to alloc_page, free_page and the
  * manager initialised by this function with no adverse effects.
  */
-int camkes_dma_manager(
+int microkit_dma_manager(
     ps_dma_man_t *man)
 NONNULL_ALL WARN_UNUSED_RESULT;
 

@@ -19,22 +19,10 @@
 #include <error.h>
 #include <utils/util.h>
 #include <sel4/sel4.h>
-// #include <vspace/page.h>
 #include <uboot_print.h>
 
 /* Check consistency of bookkeeping structures */
 #define DEBUG_DMA
-
-/* Force the _dma_pools section to be created even if no modules are defined. */
-// static USED SECTION("_dma_pools") struct {} dummy_dma_pool;
-/* Definitions so that we can find the exposed DMA frames */
-// extern dma_pool_t *__start__dma_pools[];
-// extern dma_pool_t *__stop__dma_pools[];
-
-// Declare the dma pool structure, the initialisation is done in the dma_init function
-static dma_pool_t dma_pool_global_instance;
-dma_pool_t *dma_pool_global = &dma_pool_global_instance;
-
 
 extern uintptr_t dma_base;
 extern uintptr_t dma_cp_paddr;
@@ -137,7 +125,7 @@ static uintptr_t extract_paddr(
         /* We've never looked up the physical address of this region. Look it
          * up and cache it now.
          */
-        paddr = camkes_dma_get_paddr(r);
+        paddr = microkit_dma_get_paddr(r);
         assert(paddr != 0);
         save_paddr(r, paddr);
         paddr = try_extract_paddr(r);
@@ -394,36 +382,6 @@ static void defrag(void)
     check_consistency();
 }
 
-// Change this function to only look at one dma pool
-// static dma_frame_t *get_frame_desc(
-//     void *ptr)
-// {
-//     for (dma_pool_t **pool = __start__dma_pools;
-//          pool < __stop__dma_pools; pool++) {
-//         if ((*pool)->start_vaddr <= (uintptr_t) ptr
-//             && (uintptr_t) ptr <= (*pool)->end_vaddr) {
-//             /* Calculate the frame number in the pool */
-//             uintptr_t frame_base = (uintptr_t) ptr & ~MASK(ffs((*pool)->frame_size) - 1);
-//             int frame_num = (frame_base - (*pool)->start_vaddr) / (*pool)->frame_size;
-//             dma_frame_t *frame = (*pool)->dma_frames[frame_num];
-//             return frame;
-//         }
-//     }
-
-//     return NULL;
-// }
-
-static dma_frame_t *get_frame_desc(
-    void *ptr,
-    dma_pool_t *pool)
-{
-    /* Calculate the frame number in the pool */
-    uintptr_t frame_base = (uintptr_t) ptr & ~MASK(ffs(pool->frame_size) - 1);
-    int frame_num = (frame_base - pool->start_vaddr) / pool->frame_size;
-    dma_frame_t *frame = pool->dma_frames[frame_num];
-    return frame;
-}
-
 static void free_region(
     void *ptr,
     size_t size,
@@ -470,18 +428,12 @@ static void free_region(
     check_consistency();
 }
 
-uintptr_t* getPhys(void* virt) {
-    int offset = (uint64_t)virt - (int)dma_base;
-    return (uintptr_t*)(dma_cp_paddr+offset);
-}
-
-int camkes_dma_init(
+int microkit_dma_init(
     void *dma_pool,
     size_t dma_pool_sz,
     size_t page_size,
     bool cached)
 {
-    printf("In dma init function\n");
 
     /* The caller should have passed us a valid DMA pool. */
     if (page_size != 0 && (page_size <= sizeof(region_t) ||
@@ -514,65 +466,14 @@ int camkes_dma_init(
     STATS(stats.minimum_allocation = SIZE_MAX);
     STATS(stats.minimum_alignment = INT_MAX);
 
-    printf("here\n");
-
-    // Set up dma pool, split dma pool into frames based on page size
-    // size_t num_frames = dma_pool_sz/page_size;
-    // dma_frame_t **dma_frames_array = (dma_frame_t **)malloc(num_frames * sizeof(dma_frame_t *));
-
-    // printf("here 1\n");
-
-    // // Initialize the dma_frames part of the dma_pool struct
-    // for (size_t i = 0; i < num_frames; i++) {
-    //     // Allocate memory for each frame
-    //     dma_frames_array[i] = (dma_frame_t *)malloc(sizeof(dma_frame_t));
-
-    //     // Get the physical address
-    //     printf("vaddr is: %x\n", (uintptr_t)dma_pool + (i * page_size));
-    //     uintptr_t vaddr = (uintptr_t)dma_pool + (i * page_size);
-    //     uintptr_t paddr = getPhys(vaddr);
-
-    //     // Initialize each frame
-    //     dma_frames_array[i]->cap = 3; // Placeholder, replace with actual capability
-    //     dma_frames_array[i]->size = page_size;
-    //     dma_frames_array[i]->vaddr = vaddr;
-    //     dma_frames_array[i]->paddr = paddr;
-    //     dma_frames_array[i]->cached = cached;
-    // }
-
-    // printf("here 2\n");
-
-    // // Initalise the dma pool
-    // dma_pool_global->start_vaddr = dma_pool;
-    // printf("here 3\n");
-    // dma_pool_global->end_vaddr = dma_pool + dma_pool_sz;
-    // printf("here 4\n");
-    // // frame_size = page size
-    // dma_pool_global->frame_size = page_size;
-    // printf("here 5\n");
-    // dma_pool_global->pool_size = dma_pool_sz;
-    // printf("here 6\n");
-    // dma_pool_global->num_frames = num_frames;
-    // printf("here 7\n");
-    // dma_pool_global->dma_frames = dma_frames_array;
-    // printf("here 8\n");
-
-
-    /* The caller specified a page size. Excellent; we don't have to work
-        * it out for ourselves.
-        */
+    /* Split dma pool into regions */
     for (void *base = dma_pool; base < dma_pool + dma_pool_sz;
             base += page_size) {
-            printf("base pointer %x\n", base);
-            // printf("page size %d\n", page_size);
-            // printf("base + pool size %x\n", dma_pool + dma_pool_sz);
             assert((uintptr_t)base % alignof(region_t) == 0 &&
                    "we misaligned the DMA pool base address during "
                    "initialisation");
             free_region(base, page_size, cached);
         }
-
-    printf("here 9\n");
 
     check_consistency();
 
@@ -580,22 +481,12 @@ int camkes_dma_init(
 }
 
 
-uintptr_t camkes_dma_get_paddr(
+uintptr_t microkit_dma_get_paddr(
     void *ptr)
 {
-    return getPhys(ptr);
+    int offset = (uint64_t)ptr - (int)dma_base;
+    return (uintptr_t*)(dma_cp_paddr+offset);
 
-}
-
-seL4_CPtr camkes_dma_get_cptr(
-    void *ptr)
-{
-    dma_frame_t *frame = get_frame_desc(ptr, &dma_pool_global);
-    if (frame) {
-        return frame->cap;
-    } else {
-        return seL4_CapNull;
-    }
 }
 
 /* Allocate a DMA region from a free region. */
@@ -605,7 +496,6 @@ static void *try_alloc_from_free_region(
     region_t *prev,
     region_t *p)
 {
-    printf("try_alloc_from_free_region\n");
     /* Our caller should have rounded 'size' up. */
     assert(size >= sizeof(region_t));
 
@@ -631,8 +521,6 @@ static void *try_alloc_from_free_region(
          (q == (uintptr_t)p) || (q >= (uintptr_t)p + sizeof(region_t));
          q -= align) {
         
-        printf("In for loop\n");
-        printf("size of alloc %d\n", size);
 
         uintptr_t q_end = (uintptr_t)q + size;
 
@@ -697,10 +585,6 @@ static void *try_alloc_from_free_list(
 {
     /* For each region in the free list... */
     for (region_t *prev = NULL, *p = head; p != NULL; prev = p, p = p->next) {
-        printf("start of region = %x\n", p);
-        printf("region size = %d\n", p->size);
-        printf("function cached = %d\n", cached);
-        printf("p cached = %d\n", p->cached);
 
         /* Check if region can satisfy the allocation request. */
         if ((p->size < size) || (p->cached != cached)) {
@@ -708,7 +592,6 @@ static void *try_alloc_from_free_list(
         }
 
         /* Try to allocate a DMA region within this region. */
-        printf("Before try_alloc_from_free_region\n");
         void *q = try_alloc_from_free_region(size, align, prev, p);
         if (NULL != q) {
             return q;
@@ -719,7 +602,7 @@ static void *try_alloc_from_free_list(
     return NULL;
 }
 
-void *camkes_dma_alloc(
+void *microkit_dma_alloc(
     size_t size,
     unsigned int align,
     bool cached)
@@ -745,8 +628,6 @@ void *camkes_dma_alloc(
         }
         total_allocation_bytes += size;
     }));
-
-    printf("head %x\n", head);
 
     if (head == NULL) {
         /* Nothing in the free list. */
@@ -813,12 +694,10 @@ void *camkes_dma_alloc(
         }));
     }
 
-    printf("return pointer is %x\n", p);
-
     return p;
 }
 
-void camkes_dma_free(
+void microkit_dma_free(
     void *ptr,
     size_t size)
 {
@@ -840,14 +719,14 @@ static void *dma_alloc(
     int cached,
     ps_mem_flags_t flags UNUSED)
 {
-    return camkes_dma_alloc(size, align, cached);
+    return microkit_dma_alloc(size, align, cached);
 }
 
 static void dma_free(
     void *addr,
     size_t size)
 {
-    camkes_dma_free(addr, size);
+    microkit_dma_free(addr, size);
 }
 
 /* All CAmkES DMA pages are pinned for the duration of execution, so this is
@@ -857,7 +736,7 @@ static uintptr_t dma_pin(
     void *addr,
     size_t size UNUSED)
 {
-    return camkes_dma_get_paddr(addr);
+    return microkit_dma_get_paddr(addr);
 }
 
 /* As above, all pages are pinned so this is also a no-op. */
@@ -895,7 +774,7 @@ static void dma_cache_op(
 #endif
 }
 
-int camkes_dma_manager(
+int microkit_dma_manager(
     ps_dma_man_t *man)
 {
     if (man == NULL) {
@@ -908,17 +787,4 @@ int camkes_dma_manager(
     man->dma_unpin_fn = dma_unpin;
     man->dma_cache_op_fn = dma_cache_op;
     return 0;
-}
-
-/* Legacy function */
-void *camkes_dma_alloc_page(void)
-{
-    return camkes_dma_alloc(PAGE_SIZE_4K, PAGE_SIZE_4K, false);
-}
-
-/* Legacy function */
-void camkes_dma_free_page(
-    void *ptr)
-{
-    return camkes_dma_free(ptr, PAGE_SIZE_4K);
 }
