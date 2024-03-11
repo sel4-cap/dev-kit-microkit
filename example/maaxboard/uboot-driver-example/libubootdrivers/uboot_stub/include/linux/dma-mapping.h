@@ -12,7 +12,7 @@
 #include <linux/types.h>
 #include <asm/cache.h>
 #include <sel4_dma.h>
-#include <dma/dma.h>
+#include <dma.h>
 
 
 static inline void *dma_alloc_coherent(size_t len, unsigned long *handle)

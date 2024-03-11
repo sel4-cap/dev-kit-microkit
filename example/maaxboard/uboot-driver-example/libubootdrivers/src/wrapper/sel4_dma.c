@@ -5,8 +5,11 @@
  *
  */
 
-#include <sel4platsupport/io.h>
+#include <io_dma.h>
 #include <linux/dma-direction.h>
+
+extern uintptr_t dma_base;
+extern uintptr_t dma_cp_paddr;
 
 #define MAX_DMA_ALLOCS 256
 
@@ -100,7 +103,7 @@ void *sel4_dma_phys_to_virt(void *paddr)
         return dma_alloc[alloc_index].public_vaddr +
             (paddr - dma_alloc[alloc_index].paddr);
 
-    ZF_LOGE("Unable to determine virtual address from physical %p", paddr);
+    UBOOT_LOGE("Unable to determine virtual address from physical %p", paddr);
     /* This is a fatal error. Not being able to determine an address
         * indicates that we are attempting to communicate with a
         * device via memory that has not been mapped into the physical
@@ -120,7 +123,7 @@ void *sel4_dma_virt_to_phys(void *vaddr)
         return dma_alloc[alloc_index].paddr +
             (vaddr - dma_alloc[alloc_index].public_vaddr);
 
-    ZF_LOGE("Unable to determine physical address from virtual %p", vaddr);
+    UBOOT_LOGE("Unable to determine physical address from virtual %p", vaddr);
     /* This is a fatal error. Not being able to determine an address
         * indicates that we are attempting to communicate with a
         * device via memory that has not been mapped into the physical
@@ -144,7 +147,7 @@ void sel4_dma_flush_range(void *start, void *stop)
      * we have previously allocated and mapped, and are in the same allocation */
     int alloc_index = find_allocation_index_by_public_vaddr(start);
     if (alloc_index < 0) {
-        ZF_LOGD("Flushed start address is not DMA allocated: %p", start);
+        UBOOT_LOGD("Flushed start address is not DMA allocated: %p", start);
         return;
     }
 
@@ -163,7 +166,7 @@ void sel4_dma_flush_range(void *start, void *stop)
         flush_size = (size_t) (stop - start);
     else if (stop == start)
         /* Default to flushing one cache line */
-        flush_size = (size_t) CONFIG_SYS_CBSIZE;
+        flush_size = (size_t) CONFIG_SYS_CACHELINE_SIZE;
     else
         return;
 
@@ -173,7 +176,6 @@ void sel4_dma_flush_range(void *start, void *stop)
 
     /* Perform the flush */
     sel4_dma_manager->dma_cache_op_fn(
-        sel4_dma_manager->cookie,
         flush_start,
         flush_size,
         DMA_CACHE_OP_CLEAN);
@@ -196,7 +198,7 @@ void sel4_dma_invalidate_range(void *start, void *stop)
      * we have previously allocated and mapped, and are in the same allocation */
     int alloc_index = find_allocation_index_by_public_vaddr(start);
     if (alloc_index < 0) {
-        ZF_LOGD("Flushed start address is not DMA allocated: %p", start);
+        UBOOT_LOGD("Flushed start address is not DMA allocated: %p", start);
         return;
     }
 
@@ -206,7 +208,7 @@ void sel4_dma_invalidate_range(void *start, void *stop)
         inval_size = (size_t) (stop - start);
     else if (stop == start)
         /* Default to flushing one cache line */
-        inval_size = (size_t) CONFIG_SYS_CBSIZE;
+        inval_size = (size_t) CONFIG_SYS_CACHELINE_SIZE;
     else
         return;
 
@@ -215,7 +217,6 @@ void sel4_dma_invalidate_range(void *start, void *stop)
             ((void*) start - dma_alloc[alloc_index].public_vaddr);
 
     sel4_dma_manager->dma_cache_op_fn(
-        sel4_dma_manager->cookie,
         inval_start,
         inval_size,
         DMA_CACHE_OP_INVALIDATE);
@@ -236,14 +237,13 @@ void sel4_dma_free(void *vaddr)
     // Find the previous allocation.
     int alloc_index = find_allocation_index_by_public_vaddr(vaddr);
     if (alloc_index < 0) {
-        ZF_LOGE("Call to free DMA allocation not in bookkeeping");
+        UBOOT_LOGE("Call to free DMA allocation not in bookkeeping");
         return;
     }
 
-    ZF_LOGD("vaddr = %p, alloc_index = %i", vaddr, alloc_index);
+    UBOOT_LOGD("vaddr = %p, alloc_index = %i", vaddr, alloc_index);
 
     sel4_dma_manager->dma_free_fn(
-        sel4_dma_manager->cookie,
         dma_alloc[alloc_index].mapped_vaddr,
         dma_alloc[alloc_index].size);
 
@@ -257,36 +257,33 @@ void* sel4_dma_memalign(size_t align, size_t size)
 
     int alloc_index = next_free_allocation_index();
     if (alloc_index < 0) {
-        ZF_LOGE("No free DMA allocation slots, unable to allocate");
+        UBOOT_LOGE("No free DMA allocation slots, unable to allocate");
         return NULL;
     }
 
     void* mapped_vaddr = sel4_dma_manager->dma_alloc_fn(
-        sel4_dma_manager->cookie,
         size,
         align,
-        false,
+        true,
         PS_MEM_NORMAL);
+   
     if (mapped_vaddr == NULL) {
-        ZF_LOGE("DMA allocation returned null pointer");
+        UBOOT_LOGE("DMA allocation returned null pointer");
         return NULL;
     }
 
     void *paddr = (void*) sel4_dma_manager->dma_pin_fn(
-        sel4_dma_manager->cookie,
         mapped_vaddr,
         size);
     if (paddr == NULL) {
-        ZF_LOGE("DMA pin return null pointer");
+        UBOOT_LOGE("DMA pin return null pointer");
         // Clean up before returning.
         sel4_dma_manager->dma_free_fn(
-            sel4_dma_manager->cookie,
             mapped_vaddr,
             size);
         return NULL;
     }
-
-    ZF_LOGD(
+    UBOOT_LOGD(
         "size = 0x%x, align = 0x%x, vaddr = %p, paddr = %p, alloc_index = %i",
         size, align, mapped_vaddr, paddr, alloc_index);
 
@@ -303,10 +300,10 @@ void* sel4_dma_memalign(size_t align, size_t size)
     return mapped_vaddr;
 }
 
-void* sel4_dma_ta_alloc(size_t size)
+void* sel4_dma_malloc(size_t size)
 {
     /* Default to alignment on cacheline boundaries */
-    return sel4_dma_memalign(CONFIG_SYS_CBSIZE, size);
+    return sel4_dma_memalign(CONFIG_SYS_CACHELINE_SIZE, size);
 }
 
 void sel4_dma_initialise(ps_dma_man_t *dma_manager)
@@ -322,7 +319,7 @@ void sel4_dma_shutdown(void)
     // Deallocate any currently allocated DMA.
     for (int x = 0; x < MAX_DMA_ALLOCS; x++)
         if (dma_alloc[x].in_use)
-            sel4_dma_ta_free(dma_alloc[x].public_vaddr);
+            sel4_dma_free(dma_alloc[x].public_vaddr);
 
     // Clear the pointer to the DMA routines.
     sel4_dma_manager = NULL;
@@ -334,12 +331,12 @@ void *sel4_dma_map_single(void* public_vaddr, size_t size, enum dma_data_directi
 {
     /* Only handle the DMA_TO_DEVICE and DMA_FROM_DEVICE directions */
     if (dir != DMA_TO_DEVICE && dir != DMA_FROM_DEVICE) {
-        ZF_LOGE("Unhandled DMA mapping direction: %i", dir);
+        UBOOT_LOGE("Unhandled DMA mapping direction: %i", dir);
         return NULL;
     }
 
     /* Start by creating a DMA allocation */
-    void* mapped_vaddr = sel4_dma_ta_alloc(size);
+    void* mapped_vaddr = sel4_dma_malloc(size);
     if (mapped_vaddr == NULL)
         return NULL;
 
@@ -363,12 +360,12 @@ void sel4_dma_unmap_single(void* paddr)
     /* Find the allocation index to be cleared */
     int alloc_index = find_allocation_index_by_paddr(paddr);
     if (alloc_index < 0) {
-        ZF_LOGE("Call to clear DMA mapping not in bookkeeping");
+        UBOOT_LOGE("Call to clear DMA mapping not in bookkeeping");
         return;
     }
 
     if (!dma_alloc[alloc_index].is_mapping) {
-        ZF_LOGE("Call to clear DMA mapping not in bookkeeping");
+        UBOOT_LOGE("Call to clear DMA mapping not in bookkeeping");
         return;
     }
 
@@ -379,7 +376,7 @@ void sel4_dma_unmap_single(void* paddr)
     sel4_dma_flush_range(public_vaddr, public_vaddr + size);
 
     /* Now free the DAM allocation (which also clears the mapping) */
-    sel4_dma_ta_free(public_vaddr);
+    sel4_dma_free(public_vaddr);
 }
 
 /* Map data cache requests on to DMA requests. Note that U-Boot code that is

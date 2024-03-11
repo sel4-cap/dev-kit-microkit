@@ -39,9 +39,14 @@ set(REPORT_FILE ${BUILD_DIR}/report.txt)
 set(libUbootPlatform "maaxboard")
 
 #Add libraries 
-add_subdirectory(libmicrokitutils)
+# add_subdirectory(libmicrokitutils)
 add_subdirectory(libubootdrivers)
 add_subdirectory(libutils)
+add_subdirectory(libsel4dma)
+target_include_directories(sel4dma PUBLIC 
+    "${BOARD_DIR}/include" 
+    "libubootdrivers/include/public_api/"
+    "${PICOLIBC_DIR}/include/")
 
 add_custom_target(make-img 
     ALL COMMAND bash -c
@@ -56,12 +61,12 @@ target_link_options(uboot-driver-example.elf PRIVATE ${LDFLAGS})
 target_compile_options(uboot-driver-example.elf PRIVATE ${CFLAGS})
 target_include_directories(uboot-driver-example.elf PRIVATE 
     "${BOARD_DIR}/include" 
-    "libmicrokitutils/include/"
     "libubootdrivers/include/public_api/"
-    "libubootdrivers/include/wrapper"
-    "${PICOLIBC_DIR}/include/")
-target_include_directories(uboot-driver-example.elf PRIVATE ${BOARD_DIR}/include)
-target_link_libraries(uboot-driver-example.elf PUBLIC ubootdrivers utils libmicrokitutils)
+    "${PICOLIBC_DIR}/include/"
+    )
+target_link_libraries(uboot-driver-example.elf PUBLIC ubootdrivers utils sel4dma)
+get_target_property(UBOOTDRIVERS_INCLUDE_DIRS ubootdrivers INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(uboot-driver-example.elf PRIVATE UBOOTDRIVERS_INCLUDE_DIRS)
 target_link_libraries(uboot-driver-example.elf PRIVATE ${LIBS})
 
 

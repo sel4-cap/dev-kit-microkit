@@ -647,7 +647,7 @@ if(LibUBOOT)
     list(APPEND uboot_deps src/wrapper/unimplemented.c)
     # list(APPEND uboot_deps src/wrapper/sel4_io_map.c)
     list(APPEND uboot_deps src/wrapper/uboot_drivers.c)
-    # list(APPEND uboot_deps src/wrapper/sel4_dma.c)
+    list(APPEND uboot_deps src/wrapper/sel4_dma.c)
     list(APPEND uboot_deps src/wrapper/sel4_delay.c)
     file(GLOB_RECURSE plat_deps src/plat/${KernelPlatform}/*.c)
 
@@ -667,7 +667,7 @@ if(LibUBOOT)
 
     
 
-    target_include_directories(ubootdrivers PRIVATE
+    target_include_directories(ubootdrivers PUBLIC
         # U-Boot includes (Include 'stub' first to ensure they override U-Boot includes)
         uboot_stub/include
         uboot/include
@@ -681,14 +681,13 @@ if(LibUBOOT)
         # Platform specific includes
         include/plat/${KernelPlatform}
         "${BOARD_DIR}/include"
-        ../libmicrokitutils/include
     )
 
     # Declare the public interface to the library.
-    target_include_directories(ubootdrivers INTERFACE ../libmicrokit/include)
+    # target_include_directories(ubootdrivers INTERFACE ../libmicrokit/include)
 
     # target_link_libraries(ubootdrivers sel4 muslc sel4platsupport utils)
-    target_link_libraries(ubootdrivers utils libmicrokitutils)
+    target_link_libraries(ubootdrivers utils sel4dma)
 
     #########################
     # Manage logging levels #

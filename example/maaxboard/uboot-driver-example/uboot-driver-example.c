@@ -7,14 +7,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <microkit.h>
-#include <dma/dma.h>
+#include <sel4_dma.h>
 #include <uboot_drivers.h>
 #include <string.h>
 // #include <stdint.h>
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
-#include <public_api/stdio_microkit.h>
+#include <stdio_microkit.h>
 #include <sel4_timer.h>
 
 #define CONFIG_PLAT_MAAXBOARD
@@ -177,12 +177,19 @@ const char* _end = incbin_device_tree_end;
 // picolibc setup
 seL4_IPCBuffer* __sel4_ipc_buffer_obj;
 
+static ps_dma_man_t dma_manager;
+
 void
 init(void)
 {
     const char *const_dev_paths[] = DEV_PATHS;
-    // initialise uboot library
+
+    // Initalise dma manager
+    microkit_dma_manager(&dma_manager);
+
+    // Initialise uboot library
     initialise_uboot_drivers(
+    dma_manager,
     incbin_device_tree_start,
     /* List the device tree paths for the devices */
     const_dev_paths, DEV_PATH_COUNT);
@@ -334,7 +341,7 @@ init(void)
     for (int x=0; x<=1000; x++) {
         while (uboot_stdin_tstc() > 0)
             printf("Received character: %c\n", uboot_stdin_getc(), stdout);
-        udelay(10);
+        udelay(10000);
     }
 
     run_uboot_command("usb stop");
