@@ -27,12 +27,7 @@ else()
     message(FATAL_ERROR "LibUbootPlatform not set to a defined platform")
 endif()
 
-# add_library(ubootdrivers STATIC EXCLUDE_FROM_ALL "")
-
-# add_config_library(ubootdrivers "${configure_string}")
 if(LibUBOOT)
-
-    # add_library(ubootdrivers STATIC EXCLUDE_FROM_ALL "")
 
     ##################################
     # Architecture specific settings #
@@ -642,7 +637,6 @@ if(LibUBOOT)
     list(APPEND uboot_deps uboot/drivers/phy/phy-uclass.c)
     file(GLOB_RECURSE glob_result uboot_stub/*.c)
     list(APPEND uboot_deps ${glob_result})
-    # file(GLOB_RECURSE wrapper_deps src/wrapper/*.c)
     list(APPEND uboot_deps src/wrapper/uboot_wrapper.c)
     list(APPEND uboot_deps src/wrapper/unimplemented.c)
     list(APPEND uboot_deps src/wrapper/uboot_drivers.c)
@@ -661,10 +655,7 @@ if(LibUBOOT)
     list(APPEND deps ${uboot_deps})
     list(APPEND deps ${plat_deps})
     list(SORT deps)
-    # target_sources(ubootdrivers PRIVATE ${deps})
     add_library(ubootdrivers STATIC ${deps})
-
-    
 
     target_include_directories(ubootdrivers PUBLIC
         # U-Boot includes (Include 'stub' first to ensure they override U-Boot includes)
@@ -682,10 +673,6 @@ if(LibUBOOT)
         "${BOARD_DIR}/include"
     )
 
-    # Declare the public interface to the library.
-    # target_include_directories(ubootdrivers INTERFACE ../libmicrokit/include)
-
-    # target_link_libraries(ubootdrivers sel4 muslc sel4platsupport utils)
     target_link_libraries(ubootdrivers utils sel4dma)
 
     #########################

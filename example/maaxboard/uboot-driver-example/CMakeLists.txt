@@ -10,25 +10,20 @@ set(LD ${TOOLCHAIN}-ld)
 set(CMAKE_ASM_COMPILER ${TOOLCHAIN}-as)
 set(MICROKIT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
 
-# microkit specific information
+# Microkit specific information
 set(MICROKIT_SDK ${MICROKIT_DIR}/release/microkit-sdk-1.2.6)
 set(MICROKIT_BOARD maaxboard)
 set(MICROKIT_CONFIG debug)
-# set python variables
+# Set python variables
 set(PYTHONPATH ${MICROKIT_DIR}/tool)
 set(MICROKIT_TOOL "python3 -m microkit")
-# set dtb path
+# Set dtb path
 set(DTB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/maaxboard.dtb)
 
 set(BOARD_DIR ${MICROKIT_SDK}/board/${MICROKIT_BOARD}/${MICROKIT_CONFIG})
 set(PICOLIBC_DIR ${MICROKIT_DIR}/../picolibc_build/picolibc/aarch64-linux-gnu)
 
 set(CFLAGS -mcpu=${CPU} "-DDTB_PATH=\"${DTB_PATH}\"" -nostdlib -ffreestanding -Wall -Wno-unused-function)
-# -D_XOPEN_SOURCE=700 needed to remove error relating to fls
-# set(CMAKE_C_FLAGS "-mcpu=${CPU} -ffreestanding -nostdlib -nolibc" )
-
-
-
 set(LDFLAGS -L${BOARD_DIR}/lib -nostdlib)
 set(LIBS -lmicrokit -Tmicrokit.ld -lgcc -L${PICOLIBC_DIR}/lib -lc -lm -lgcc)
 
@@ -50,12 +45,10 @@ target_include_directories(sel4dma PUBLIC
 add_custom_target(make-img 
     ALL COMMAND bash -c
     "PYTHONPATH=${PYTHONPATH} MICROKIT_SDK=${MICROKIT_SDK} ${MICROKIT_TOOL} ../uboot-driver-example.system --search-path ${BUILD_DIR} --board ${MICROKIT_BOARD} --config ${MICROKIT_CONFIG} -o ${IMAGE_FILE} -r ${REPORT_FILE}")
-    
-    # COMMAND ${CMAKE_COMMAND} -E env "MICROKIT_SDK=${MICROKIT_SDK} MICROKIT_BOARD=${MICROKIT_BOARD} MICROKIT_CONFIG=debug PYTHONPATH=${PYTHONPATH} MICROKIT_TOOL=${MICROKIT_TOOL}"
 
 add_executable(uboot-driver-example.elf uboot-driver-example.c)
 
-# linker
+# Linker
 target_link_options(uboot-driver-example.elf PRIVATE ${LDFLAGS})
 target_compile_options(uboot-driver-example.elf PRIVATE ${CFLAGS})
 target_include_directories(uboot-driver-example.elf PRIVATE 
