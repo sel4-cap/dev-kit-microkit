@@ -38,8 +38,7 @@ set(REPORT_FILE ${BUILD_DIR}/report.txt)
 
 set(libUbootPlatform "maaxboard")
 
-#Add libraries 
-# add_subdirectory(libmicrokitutils)
+# Add libraries 
 add_subdirectory(libubootdrivers)
 add_subdirectory(libutils)
 add_subdirectory(libsel4dma)
