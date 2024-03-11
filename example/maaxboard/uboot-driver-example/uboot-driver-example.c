@@ -10,7 +10,6 @@
 #include <sel4_dma.h>
 #include <uboot_drivers.h>
 #include <string.h>
-// #include <stdint.h>
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
@@ -83,8 +82,7 @@
             ".byte 0\n" \
     ); \
     extern __attribute__((aligned(16))) const char incbin_ ## name ## _start[]; \
-    extern                              const char incbin_ ## name ## _end[]
-// INCBIN(device_tree, "kernel/kernel.bin"); 
+    extern                              const char incbin_ ## name ## _end[] 
 INCBIN(device_tree, DTB_PATH); 
 
 const char* _end = incbin_device_tree_end;
@@ -199,7 +197,6 @@ init(void)
     #ifdef TEST_CLK
     run_uboot_command("clk dump");
     #endif
-
 
     #ifdef TEST_SPI
     printf("Initialising BMP280 sensor on SPI bus (if connected):\n");
