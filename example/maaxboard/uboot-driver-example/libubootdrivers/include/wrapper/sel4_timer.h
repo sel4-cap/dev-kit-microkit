@@ -5,8 +5,6 @@
  * 
  */
 
-// #include <linux/kernel.h>
-
 void initialise_and_start_timer(void);
 
 void shutdown_timer(void);
@@ -14,8 +12,3 @@ void shutdown_timer(void);
 void udelay(unsigned long);
 
 void mdelay(unsigned int);
-
-// static inline void ndelay(unsigned long nsec)
-// {
-// 	mdelay(DIV_ROUND_UP(nsec, 1000000));
-// }
