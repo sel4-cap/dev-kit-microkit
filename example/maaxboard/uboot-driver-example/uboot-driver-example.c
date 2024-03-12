@@ -62,9 +62,6 @@
     #define TEST_FILESYSTEM_FILENAME  "test_file.txt"
 #endif
 
-
-
-
 // fdt initialise 
 #define STR2(x) #x
 #define STR(x) STR2(x)
@@ -177,13 +174,22 @@ seL4_IPCBuffer* __sel4_ipc_buffer_obj;
 
 static ps_dma_man_t dma_manager;
 
+// DMA state
+uintptr_t dma_base;
+uintptr_t dma_cp_paddr;
+size_t dma_size = 0x100000;
+
 void
 init(void)
 {
     const char *const_dev_paths[] = DEV_PATHS;
 
-    // Initalise dma manager
+    // Initalise DMA manager
     microkit_dma_manager(&dma_manager);
+
+    // Initialise DMA
+    microkit_dma_init(dma_base, dma_size,
+        4096, 1);
 
     // Initialise uboot library
     initialise_uboot_drivers(

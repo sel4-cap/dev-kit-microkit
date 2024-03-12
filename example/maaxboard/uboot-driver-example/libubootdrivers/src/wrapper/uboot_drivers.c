@@ -24,11 +24,6 @@
 // Pointer to the FDT.
 static void* uboot_fdt_pointer = NULL;
 
-// DMA state
-uintptr_t dma_base;
-uintptr_t dma_cp_paddr;
-size_t dma_size = 0x100000;
-
 static int set_parent_status(int current_node, char *status_to_set)
 {
     // Set status of this node.
@@ -127,8 +122,6 @@ int initialise_uboot_drivers(
     //     goto error;
 
     // Initalise microkit DMA, cached is set to true in the system file
-    microkit_dma_init(dma_base, dma_size,
-        4096, 1);
     sel4_dma_initialise(&dma_manager);
 
     // Start the U-Boot wrapper. Provide it a pointer to the FDT blob.
