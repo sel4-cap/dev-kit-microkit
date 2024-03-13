@@ -53,11 +53,11 @@ fi
 
 # Build application 
 cd ../../microkit
-# rm -rf example/maaxboard/$string_argument/build
-# mkdir example/maaxboard/$string_argument/build
+rm -rf example/maaxboard/$string_argument/build
+mkdir example/maaxboard/$string_argument/build
 rm -rf example/maaxboard/$string_argument/example-build
 mkdir example/maaxboard/$string_argument/example-build
 cd example/maaxboard/$string_argument/build
-cmake .. 
+cmake $microkit_path
 make 
 sudo cp $microkit_path/example/maaxboard/uboot-driver-example/example-build/sel4test-driver-image-arm-maaxboard.img "/var/lib/tftpboot/loader-daniel.img"

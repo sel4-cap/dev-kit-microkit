@@ -8,7 +8,7 @@ project(uboot-driver-example-microkit LANGUAGES C)
 
 set(LD ${TOOLCHAIN}-ld)
 set(CMAKE_ASM_COMPILER ${TOOLCHAIN}-as)
-set(MICROKIT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../..)
+set(MICROKIT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Microkit specific information
 set(MICROKIT_SDK ${MICROKIT_DIR}/release/microkit-sdk-1.2.6)
@@ -18,16 +18,17 @@ set(MICROKIT_CONFIG debug)
 set(PYTHONPATH ${MICROKIT_DIR}/tool)
 set(MICROKIT_TOOL "python3 -m microkit")
 # Set dtb path
-set(DTB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/maaxboard.dtb)
+set(DTB_PATH ${CMAKE_CURRENT_SOURCE_DIR}/boards/maaxboard.dtb)
 
 set(BOARD_DIR ${MICROKIT_SDK}/board/${MICROKIT_BOARD}/${MICROKIT_CONFIG})
-set(PICOLIBC_DIR ${MICROKIT_DIR}/../picolibc_build/picolibc/aarch64-linux-gnu)
+set(PICOLIBC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../picolibc_build/picolibc/aarch64-linux-gnu)
 
 set(CFLAGS -mcpu=${CPU} "-DDTB_PATH=\"${DTB_PATH}\"" -nostdlib -ffreestanding -Wall -Wno-unused-function)
 set(LDFLAGS -L${BOARD_DIR}/lib -nostdlib)
 set(LIBS -lmicrokit -Tmicrokit.ld -lgcc -L${PICOLIBC_DIR}/lib -lc -lm -lgcc)
 
-set(BUILD_DIR ${CMAKE_CURRENT_LIST_DIR}/example-build)
+set(PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/example/maaxboard/uboot-driver-example)
+set(BUILD_DIR ${PROJECT_DIR}/example-build)
 set(IMAGE_FILE ${BUILD_DIR}/sel4test-driver-image-arm-maaxboard.img)
 set(REPORT_FILE ${BUILD_DIR}/report.txt)
 
@@ -46,7 +47,7 @@ add_custom_target(make-img
     ALL COMMAND bash -c
     "PYTHONPATH=${PYTHONPATH} MICROKIT_SDK=${MICROKIT_SDK} ${MICROKIT_TOOL} ../uboot-driver-example.system --search-path ${BUILD_DIR} --board ${MICROKIT_BOARD} --config ${MICROKIT_CONFIG} -o ${IMAGE_FILE} -r ${REPORT_FILE}")
 
-add_executable(uboot-driver-example.elf uboot-driver-example.c)
+add_executable(uboot-driver-example.elf example/maaxboard/uboot-driver-example/uboot-driver-example.c)
 
 # Linker
 target_link_options(uboot-driver-example.elf PRIVATE ${LDFLAGS})
