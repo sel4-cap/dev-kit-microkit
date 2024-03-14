@@ -14,7 +14,6 @@ tmp_build/
 *.img
 *.elf
 *.o
-*.txt
 *.sh.venv/
 .venv/
 example/maaxboard/xhci_stub
