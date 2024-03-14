@@ -10,7 +10,6 @@
 #include <sel4_dma.h>
 #include <uboot_drivers.h>
 #include <string.h>
-// #include <stdint.h>
 #include <assert.h>
 #include <errno.h>
 #include <math.h>
@@ -63,9 +62,6 @@
     #define TEST_FILESYSTEM_FILENAME  "test_file.txt"
 #endif
 
-
-
-
 // fdt initialise 
 #define STR2(x) #x
 #define STR(x) STR2(x)
@@ -83,8 +79,7 @@
             ".byte 0\n" \
     ); \
     extern __attribute__((aligned(16))) const char incbin_ ## name ## _start[]; \
-    extern                              const char incbin_ ## name ## _end[]
-// INCBIN(device_tree, "kernel/kernel.bin"); 
+    extern                              const char incbin_ ## name ## _end[] 
 INCBIN(device_tree, DTB_PATH); 
 
 const char* _end = incbin_device_tree_end;
@@ -179,13 +174,22 @@ seL4_IPCBuffer* __sel4_ipc_buffer_obj;
 
 static ps_dma_man_t dma_manager;
 
+// DMA state
+uintptr_t dma_base;
+uintptr_t dma_cp_paddr;
+size_t dma_size = 0x100000;
+
 void
 init(void)
 {
     const char *const_dev_paths[] = DEV_PATHS;
 
-    // Initalise dma manager
+    // Initalise DMA manager
     microkit_dma_manager(&dma_manager);
+
+    // Initialise DMA
+    microkit_dma_init(dma_base, dma_size,
+        4096, 1);
 
     // Initialise uboot library
     initialise_uboot_drivers(
@@ -199,7 +203,6 @@ init(void)
     #ifdef TEST_CLK
     run_uboot_command("clk dump");
     #endif
-
 
     #ifdef TEST_SPI
     printf("Initialising BMP280 sensor on SPI bus (if connected):\n");
