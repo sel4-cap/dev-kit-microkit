@@ -3,17 +3,40 @@
 # Microkit path
 microkit_path=${PWD}
 
-# Assign the first argument to a variable
-string_argument="$1"
+# Initialize variables to store the values of the command-line options
+MICROKIT_APP=""
+PLATFORM=""
 
-# Check if the string argument is provided
-if [ -z "$string_argument" ]; then
-    echo "No argument provided. Please provide a string argument."
+# Function to display usage information
+usage() {
+    echo "Usage: $0 -DMICROKIT_APP=app_name -DPLATFORM=platform"
     exit 1
-else
-    echo "The provided string argument is: $string_argument"
-    # Add your code here that should run with the string argument
+}
+
+# Parse command-line options
+while [ "$#" -gt 0 ]; do
+    case $1 in
+        -DMICROKIT_APP=*)
+            MICROKIT_APP="${1#*=}"
+            ;;
+        -DPLATFORM=*)
+            PLATFORM="${1#*=}"
+            ;;
+        *)
+            usage
+            ;;
+    esac
+    shift
+done
+
+# Check if mandatory options are provided
+if [ -z "$MICROKIT_APP" ] || [ -z "$PLATFORM" ]; then
+    echo "Error: Missing mandatory arguments."
+    usage
 fi
+
+echo "MICROKIT_APP: $MICROKIT_APP"
+echo "PLATFORM: $PLATFORM"
 
 
 # Build SDK
@@ -53,11 +76,11 @@ fi
 
 # Build application 
 cd ../../microkit
-rm -rf example/maaxboard/$string_argument/build
-mkdir example/maaxboard/$string_argument/build
-rm -rf example/maaxboard/$string_argument/example-build
-mkdir example/maaxboard/$string_argument/example-build
-cd example/maaxboard/$string_argument/build
-cmake $microkit_path
+rm -rf example/maaxboard/$MICROKIT_APP/build
+mkdir example/maaxboard/$MICROKIT_APP/build
+rm -rf example/maaxboard/$MICROKIT_APP/example-build
+mkdir example/maaxboard/$MICROKIT_APP/example-build
+cd example/maaxboard/$MICROKIT_APP/build
+cmake -DMICROKIT_APP=$MICROKIT_APP -DPLATFORM=$PLATFORM $microkit_path
 make 
-sudo cp $microkit_path/example/maaxboard/uboot-driver-example/example-build/sel4test-driver-image-arm-maaxboard.img "/var/lib/tftpboot/loader-daniel.img"
+sudo cp $microkit_path/example/$PLATFORM/uboot-driver-example/example-build/sel4_image.img "/var/lib/tftpboot/loader-daniel.img"
