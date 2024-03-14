@@ -29,7 +29,7 @@ set(LIBS -lmicrokit -Tmicrokit.ld -lgcc -L${PICOLIBC_DIR}/lib -lc -lm -lgcc)
 
 set(PROJECT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/example/${PLATFORM}/${MICROKIT_APP})
 set(BUILD_DIR ${PROJECT_DIR}/example-build)
-set(IMAGE_FILE ${BUILD_DIR}/sel4test-driver-image-arm-${PLATFORM}.img)
+set(IMAGE_FILE ${BUILD_DIR}/sel4_image.img)
 set(REPORT_FILE ${BUILD_DIR}/report.txt)
 
 set(libUbootPlatform ${PLATFORM})
