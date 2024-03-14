@@ -112,8 +112,9 @@ if(LibUBOOT)
         # Create a symlink named 'arch' to the platform's headers. This
         # mimics the behaviour of the "CREATE_ARCH_SYMLINK" option within
         # U-Boot's build system (see Makefile.autoconf).
+        execute_process(COMMAND ${CMAKE_COMMAND} -E make_directory uboot/arch/arm/include/asm/arch)
         set(arch_source "./arch-imx8m")
-        set(arch_target "../libubootdrivers/uboot/arch/arm/include/asm/arch")
+        set(arch_target "${CMAKE_CURRENT_SOURCE_DIR}/uboot/arch/arm/include/asm/arch")
         execute_process(COMMAND ln -fsn ${arch_source} ${arch_target})
 
     elseif("${KernelPlatform}" STREQUAL "odroidc2")
